@@ -1,6 +1,9 @@
+// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package software.aws.toolkits.core.telemetry
 
-import org.slf4j.LoggerFactory
+import software.aws.toolkits.core.utils.getLogger
 import java.util.Collections
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingDeque
@@ -31,9 +34,7 @@ interface MetricsPublisher : MetricsFactory {
      * @param metric The event to publish
      * @return true if successfully published, else false
      */
-    fun publishMetric(metric: Metric): Boolean {
-        return publishMetrics(Collections.singleton(metric))
-    }
+    fun publishMetric(metric: Metric): Boolean = publishMetrics(Collections.singleton(metric))
 
     /**
      * Records the collection of events to the backing analytics platform
@@ -48,9 +49,7 @@ interface MetricsPublisher : MetricsFactory {
      */
     fun shutdown()
 
-    override fun newMetric(metricNamespace: String): Metric {
-        return Metric(metricNamespace, this)
-    }
+    override fun newMetric(metricNamespace: String): Metric = Metric(metricNamespace, this)
 }
 
 class NoOpMetricPublisher : MetricsPublisher {
@@ -150,7 +149,7 @@ class BatchingMetricsPublisher(
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(BatchingMetricsPublisher::class.java)
+        private val LOG = getLogger<BatchingMetricsPublisher>()
         private const val MAX_QUEUE_SIZE = 10_000
         private const val MAX_BATCH_SIZE = 100
         private const val DEFAULT_PUBLISH_INTERVAL = 5L

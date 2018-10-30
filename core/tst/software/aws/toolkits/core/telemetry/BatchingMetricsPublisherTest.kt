@@ -1,18 +1,20 @@
+// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package software.aws.toolkits.core.telemetry
 
 import assertk.assert
 import assertk.assertions.hasSize
-import org.junit.Before
-import org.junit.Rule
+import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.doAnswer
+import com.nhaarman.mockitokotlin2.doReturn
+import com.nhaarman.mockitokotlin2.doThrow
+import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.stub
 import org.junit.Test
-import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.anyCollection
-import org.mockito.Captor
-import org.mockito.Mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
-import org.mockito.junit.MockitoJUnit
-import org.mockito.junit.MockitoRule
 import org.mockito.stubbing.Answer
 import java.util.ArrayList
 import java.util.concurrent.CountDownLatch
@@ -20,33 +22,25 @@ import java.util.concurrent.TimeUnit
 import org.mockito.Mockito.`when` as whenever
 
 class BatchingMetricsPublisherTest {
-    @Rule
-    @JvmField
-    val mockitoRule: MockitoRule = MockitoJUnit.rule()
+    private var downstreamPublisher: MetricsPublisher = mock()
 
-    @Mock
-    private lateinit var downstreamPublisher: MetricsPublisher
+    private var batchingMetricsPublisher = BatchingMetricsPublisher(
+        downstreamPublisher,
+        10,
+        TimeUnit.MILLISECONDS,
+        MAX_BATCH_SIZE
+    )
 
-    @Captor
-    private lateinit var recordEventsCaptor: ArgumentCaptor<Collection<Metric>>
-
-    private lateinit var batchingMetricsPublisher: BatchingMetricsPublisher
-
-    @Before
-    fun setUp() {
-        batchingMetricsPublisher = BatchingMetricsPublisher(
-            downstreamPublisher,
-            10,
-            TimeUnit.MILLISECONDS,
-            MAX_BATCH_SIZE
-        )
-    }
-
-    @Test fun testSingleBatch() {
+    @Test
+    fun testSingleBatch() {
         val publishCount = CountDownLatch(1)
 
-        whenever(downstreamPublisher.publishMetrics(capturePublishMetrics()))
-            .then(createPublishAnswer(publishCount, true))
+        val recordEventsCaptor = argumentCaptor<Collection<Metric>>()
+
+        downstreamPublisher.stub {
+            on(downstreamPublisher.publishMetrics(recordEventsCaptor.capture()))
+                .doAnswer(createPublishAnswer(publishCount, true))
+        }
 
         batchingMetricsPublisher.newMetric(EVENT_NAME).close()
 
@@ -54,15 +48,20 @@ class BatchingMetricsPublisherTest {
 
         verify(downstreamPublisher).publishMetrics(anyCollection<Metric>())
 
-        assert(recordEventsCaptor.value).hasSize(1)
+        assert(recordEventsCaptor.firstValue).hasSize(1)
     }
 
-    @Test fun testSplitBatch() {
+    @Test
+    fun testSplitBatch() {
         // Will publish in 2 batches
         val publishCount = CountDownLatch(2)
 
-        whenever(downstreamPublisher.publishMetrics(capturePublishMetrics()))
-            .then(createPublishAnswer(publishCount, true))
+        val recordEventsCaptor = argumentCaptor<Collection<Metric>>()
+
+        downstreamPublisher.stub {
+            on(downstreamPublisher.publishMetrics(recordEventsCaptor.capture()))
+                .doAnswer(createPublishAnswer(publishCount, true))
+        }
 
         val totalEvents = MAX_BATCH_SIZE + 1
         val events = ArrayList<Metric>(totalEvents)
@@ -80,12 +79,17 @@ class BatchingMetricsPublisherTest {
         assert(recordEventsCaptor.allValues[1]).hasSize(totalEvents - MAX_BATCH_SIZE)
     }
 
-    @Test fun testRetry() {
+    @Test
+    fun testRetry() {
         val publishCount = CountDownLatch(2)
 
-        whenever(downstreamPublisher.publishMetrics(capturePublishMetrics()))
-            .then(createPublishAnswer(publishCount, false))
-            .then(createPublishAnswer(publishCount, true))
+        val recordEventsCaptor = argumentCaptor<Collection<Metric>>()
+
+        downstreamPublisher.stub {
+            on(downstreamPublisher.publishMetrics(recordEventsCaptor.capture()))
+                .doAnswer(createPublishAnswer(publishCount, false))
+                .doAnswer(createPublishAnswer(publishCount, true))
+        }
 
         batchingMetricsPublisher.newMetric(EVENT_NAME).close()
 
@@ -98,12 +102,17 @@ class BatchingMetricsPublisherTest {
         assert(recordEventsCaptor.allValues[1]).hasSize(1)
     }
 
-    @Test fun testRetryException() {
+    @Test
+    fun testRetryException() {
         val publishCount = CountDownLatch(1)
 
-        whenever(downstreamPublisher.publishMetrics(capturePublishMetrics()))
-            .thenThrow(RuntimeException("Mock exception"))
-            .then(createPublishAnswer(publishCount, true))
+        val recordEventsCaptor = argumentCaptor<Collection<Metric>>()
+
+        downstreamPublisher.stub {
+            on(downstreamPublisher.publishMetrics(recordEventsCaptor.capture()))
+                .doThrow(RuntimeException("Mock exception"))
+                .doAnswer(createPublishAnswer(publishCount, true))
+        }
 
         batchingMetricsPublisher.newMetric(EVENT_NAME).close()
 
@@ -116,9 +125,14 @@ class BatchingMetricsPublisherTest {
         assert(recordEventsCaptor.allValues[1]).hasSize(1)
     }
 
-    @Test fun testShutdown() {
-        whenever(downstreamPublisher.publishMetrics(capturePublishMetrics()))
-            .thenReturn(true)
+    @Test
+    fun testShutdown() {
+        val recordEventsCaptor = argumentCaptor<Collection<Metric>>()
+
+        downstreamPublisher.stub {
+            on(downstreamPublisher.publishMetrics(recordEventsCaptor.capture()))
+                .doReturn(true)
+        }
 
         batchingMetricsPublisher.newMetric(EVENT_NAME).close()
         batchingMetricsPublisher.shutdown()
@@ -129,7 +143,7 @@ class BatchingMetricsPublisherTest {
         verify(downstreamPublisher).publishMetrics(anyCollection<Metric>())
 
         assert(recordEventsCaptor.allValues).hasSize(1)
-        assert(recordEventsCaptor.value).hasSize(1)
+        assert(recordEventsCaptor.firstValue).hasSize(1)
     }
 
     private fun waitForPublish(publishCount: CountDownLatch) {
@@ -137,14 +151,9 @@ class BatchingMetricsPublisherTest {
         publishCount.await(5, TimeUnit.SECONDS)
     }
 
-    // Used to work around the null checks caused by Kotlin and ArgumentCaptor.capture()
-    private fun capturePublishMetrics(): Collection<Metric> = recordEventsCaptor.capture() ?: emptyList<Metric>()
-
-    private fun createPublishAnswer(publishCount: CountDownLatch, value: Boolean): Answer<Boolean> {
-        return Answer {
-            publishCount.countDown();
-            value;
-        }
+    private fun createPublishAnswer(publishCount: CountDownLatch, value: Boolean): Answer<Boolean> = Answer {
+        publishCount.countDown()
+        value
     }
 
     companion object {

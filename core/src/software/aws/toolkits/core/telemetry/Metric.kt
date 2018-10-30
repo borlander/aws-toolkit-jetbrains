@@ -1,6 +1,9 @@
+// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package software.aws.toolkits.core.telemetry
 
-import org.slf4j.LoggerFactory
+import software.aws.toolkits.core.utils.getLogger
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneOffset
@@ -67,7 +70,7 @@ open class Metric internal constructor(internal val metricNamespace: String, pri
     }
 
     companion object {
-        private val LOG = LoggerFactory.getLogger(Metric::class.java)
+        private val LOG = getLogger<Metric>()
     }
 }
 

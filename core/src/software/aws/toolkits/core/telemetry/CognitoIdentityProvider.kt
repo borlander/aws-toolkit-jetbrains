@@ -1,40 +1,49 @@
+// Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package software.aws.toolkits.core.telemetry
 
-import software.amazon.awssdk.core.auth.AnonymousCredentialsProvider
-import software.amazon.awssdk.core.auth.AwsCredentialsProvider
-import software.amazon.awssdk.core.auth.AwsSessionCredentials
-import software.amazon.awssdk.core.regions.Region
+import software.amazon.awssdk.auth.credentials.AnonymousCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsCredentials
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
 import software.amazon.awssdk.services.cognitoidentity.CognitoIdentityClient
-import software.amazon.awssdk.services.cognitoidentity.model.Credentials
 import software.amazon.awssdk.services.cognitoidentity.model.GetCredentialsForIdentityRequest
 import software.amazon.awssdk.services.cognitoidentity.model.GetIdRequest
 import software.amazon.awssdk.utils.cache.CachedSupplier
 import software.amazon.awssdk.utils.cache.NonBlocking
 import software.amazon.awssdk.utils.cache.RefreshResult
+import software.aws.toolkits.core.ToolkitClientManager
+import software.aws.toolkits.core.credentials.StaticCredentialsToolkitCredentialsProvider
+import software.aws.toolkits.core.region.ToolkitRegionProvider
 import java.time.temporal.ChronoUnit
 
-
 /**
- * AWSCredentialsProvider implementation that uses the Amazon Cognito Identity
+ * [AwsCredentialsProvider] implementation that uses the Amazon Cognito Identity
  * service to create temporary, short-lived sessions to use for authentication
  *
- * @constructor Creates a new AWSCredentialsProvider that uses credentials from a Cognito Identity pool.
+ * @constructor Creates a new AwsCredentialsProvider that uses credentials from a Cognito Identity pool.
  * @property identityPool The name of the pool to create users from
- * @property cognitoIdentityClient The Cognito client to use
+ * @param clientManager The Toolkit wide client manager for sharing of clients
+ * @param regionProvider The Toolkit region info provider
  * @param cacheStorage A storage solution to cache an identity ID, disabled if null
  */
 class AWSCognitoCredentialsProvider(
     private val identityPool: String,
-    private val cognitoIdentityClient: CognitoIdentityClient,
+    clientManager: ToolkitClientManager,
+    regionProvider: ToolkitRegionProvider,
     cacheStorage: CachedIdentityStorage? = null
 ) : AwsCredentialsProvider {
-
-    private val identityIdProvider = AWSCognitoIdentityProvider(cognitoIdentityClient, identityPool, cacheStorage)
+    private val cognitoClient = clientManager.getClient<CognitoIdentityClient>(
+        credentialsProviderOverride = StaticCredentialsToolkitCredentialsProvider(AnonymousCredentialsProvider.create().resolveCredentials()),
+        regionOverride = regionProvider.regions()["us-east-1"] ?: throw IllegalStateException("us-east-1 is missing from endpoints data")
+    )
+    private val identityIdProvider = AwsCognitoIdentityProvider(cognitoClient, identityPool, cacheStorage)
     private val cacheSupplier = CachedSupplier.builder(this::updateCognitoCredentials)
         .prefetchStrategy(NonBlocking("Cognito Identity Credential Refresh"))
         .build()
 
-    override fun getCredentials(): AwsSessionCredentials = cacheSupplier.get()
+    override fun resolveCredentials(): AwsCredentials = cacheSupplier.get()
 
     private fun updateCognitoCredentials(): RefreshResult<AwsSessionCredentials> {
         val credentialsForIdentity = credentialsForIdentity()
@@ -51,28 +60,14 @@ class AWSCognitoCredentialsProvider(
             .build()
     }
 
-    private fun credentialsForIdentity(): Credentials {
+    private fun credentialsForIdentity(): software.amazon.awssdk.services.cognitoidentity.model.Credentials {
         val identityId = identityIdProvider.identityId
         val request = GetCredentialsForIdentityRequest.builder().identityId(identityId).build()
-        return cognitoIdentityClient.getCredentialsForIdentity(request).credentials()
-    }
-
-    companion object {
-        /**
-         * Creates a Cognito Identity client with anonymous AWS credentials for use without a specific account
-         */
-        fun createAnonymousClient(region: Region): CognitoIdentityClient {
-            val clientBuilder = CognitoIdentityClient.builder().apply {
-                it.credentialsProvider(AnonymousCredentialsProvider.create())
-                it.region(region)
-            }
-
-            return clientBuilder.build()
-        }
+        return cognitoClient.getCredentialsForIdentity(request).credentials()
     }
 }
 
-internal class AWSCognitoIdentityProvider(
+private class AwsCognitoIdentityProvider(
     private val cognitoClient: CognitoIdentityClient,
     private val identityPoolId: String,
     private val cacheStorage: CachedIdentityStorage? = null
@@ -91,26 +86,4 @@ internal class AWSCognitoIdentityProvider(
 
         return newIdentityId
     }
-}
-
-/**
- * Used to provide a way to cache an identity ID in order to prevent creating additional unneeded identities.
- */
-interface CachedIdentityStorage {
-    /**
-     * Saves the identity ID to the backing storage.
-     *
-     * @param identityPoolId The pool the identity belongs to
-     * @param identityId The generated ID
-     */
-    fun storeIdentity(identityPoolId: String, identityId: String)
-
-    /**
-     * Attempts to retrieve the identity ID from the backing storage. If no ID exists for the specified pool,
-     * `null` should be returned in order to generate a new ID.
-     *
-     * @param identityPoolId The ID of the pool we are requested the ID for
-     * @return The ID for the specified pool, else null
-     */
-    fun loadIdentity(identityPoolId: String): String?
 }
