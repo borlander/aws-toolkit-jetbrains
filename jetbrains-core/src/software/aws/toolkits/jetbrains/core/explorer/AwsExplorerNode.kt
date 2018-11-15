@@ -13,6 +13,8 @@ import com.intellij.ui.SimpleTextAttributes
 import icons.AwsIcons
 import software.aws.toolkits.core.utils.getLogger
 import software.aws.toolkits.jetbrains.core.credentials.ProjectAccountSettingsManager
+import software.aws.toolkits.jetbrains.core.credentials.activeCredentialProvider
+import software.aws.toolkits.jetbrains.core.credentials.activeRegion
 import software.aws.toolkits.jetbrains.core.region.AwsRegionProvider
 import software.aws.toolkits.resources.message
 import javax.swing.Icon
@@ -23,12 +25,23 @@ import javax.swing.tree.MutableTreeNode
 abstract class AwsExplorerNode<T>(val nodeProject: Project, value: T, private val awsIcon: Icon?) : AbstractTreeNode<T>(nodeProject, value) {
 
     override fun update(presentation: PresentationData?) {
-        presentation?.setIcon(awsIcon)
+        presentation?.let {
+            it.setIcon(awsIcon)
+            it.addText(displayName(), SimpleTextAttributes.REGULAR_ATTRIBUTES)
+            statusText()?.let { status ->
+                it.addText(" [$status]", SimpleTextAttributes.GRAY_ATTRIBUTES)
+            }
+        }
     }
 
-    override fun toString() = value.toString()
+    open fun displayName() = value.toString()
+
+    open fun statusText(): String? = null
 
     open fun onDoubleClick(model: DefaultTreeModel, selectedElement: DefaultMutableTreeNode) {}
+
+    protected val region by lazy { nodeProject.activeRegion() }
+    protected val credentialProvider by lazy { nodeProject.activeCredentialProvider() }
 }
 
 class AwsExplorerRootNode(project: Project) : AwsExplorerNode<String>(project, "ROOT", AwsIcons.Logos.AWS) {
@@ -85,13 +98,12 @@ abstract class AwsExplorerServiceRootNode(project: Project, value: String) : Aws
 abstract class AwsExplorerResourceNode<T>(
     project: Project,
     val serviceName: String,
-    val resourceType: String,
     value: T,
     awsIcon: Icon
 ) : AwsExplorerNode<T>(project, value, awsIcon) {
-    final override fun getChildren(): Collection<AbstractTreeNode<Any>> = emptyList()
+    override fun getChildren(): Collection<AbstractTreeNode<Any>> = emptyList()
 
-    override fun isAlwaysLeaf() = true
+    abstract fun resourceType(): String
 }
 
 class AwsTruncatedResultNode(private val parentNode: AwsExplorerPageableNode<*>, private val paginationToken: String) :
@@ -178,7 +190,6 @@ class AwsExplorerErrorNode(project: Project, exception: Exception) :
     override fun getChildren(): Collection<AbstractTreeNode<Any>> = emptyList()
 
     override fun update(presentation: PresentationData?) {
-        super.update(presentation)
         presentation?.apply {
             // If we don't have a message, at least give them the error type
             tooltip = value.message ?: value.javaClass.simpleName
@@ -197,8 +208,7 @@ class AwsExplorerEmptyNode(project: Project) : AwsExplorerNode<String>(project, 
     override fun getChildren(): Collection<AbstractTreeNode<Any>> = emptyList()
 
     override fun update(presentation: PresentationData?) {
-        super.update(presentation)
-        presentation?.addText(toString(), SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        presentation?.addText(displayName(), SimpleTextAttributes.GRAYED_ATTRIBUTES)
     }
 
     override fun isAlwaysLeaf() = true
