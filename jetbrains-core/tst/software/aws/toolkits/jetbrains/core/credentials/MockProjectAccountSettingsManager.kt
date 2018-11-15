@@ -17,6 +17,8 @@ import software.aws.toolkits.jetbrains.core.region.AwsRegionProvider
 class MockProjectAccountSettingsManager : ProjectAccountSettingsManager {
     private var internalProvider: ToolkitCredentialsProvider? = DUMMY_PROVIDER
 
+    val internalRecentlyUsedRegions = mutableListOf<AwsRegion>()
+
     override var activeRegion = AwsRegionProvider.getInstance().defaultRegion()
 
     override var activeCredentialProvider: ToolkitCredentialsProvider
@@ -25,13 +27,9 @@ class MockProjectAccountSettingsManager : ProjectAccountSettingsManager {
             internalProvider = value
         }
 
-    override fun recentlyUsedRegions(): List<AwsRegion> {
-        TODO("not implemented")
-    }
+    override fun recentlyUsedRegions(): List<AwsRegion> = internalRecentlyUsedRegions
 
-    override fun recentlyUsedCredentials(): List<ToolkitCredentialsProvider> {
-        TODO("not implemented")
-    }
+    override fun recentlyUsedCredentials(): List<ToolkitCredentialsProvider> = mutableListOf()
 
     companion object {
         private val DUMMY_PROVIDER = createDummyProvider(

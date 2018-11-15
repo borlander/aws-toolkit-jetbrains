@@ -189,7 +189,7 @@ class SamRunConfiguration(project: Project, factory: ConfigurationFactory) :
                 } catch (e: Exception) {
                     throw RuntimeConfigurationError(
                         message(
-                            "lambda.run_configuration.credential_error",
+                            "lambda.run_configuration.credential_error",MockProjectAccountSettingsManage
                             e.message ?: "Unknown"
                         )
                     )
