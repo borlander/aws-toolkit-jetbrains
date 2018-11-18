@@ -11,6 +11,7 @@ import com.intellij.ui.EditorTextField;
 import com.intellij.ui.IdeBorderFactory;
 import com.intellij.util.textCompletion.TextFieldWithCompletion;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JSlider;
@@ -40,6 +41,7 @@ public class EditFunctionPanel {
     @NotNull JSlider timeoutSlider;
     @NotNull JPanel configurationSettings;
     @NotNull JLabel handlerLabel;
+    @NotNull JCheckBox enableXray;
 
     private final Project project;
 
@@ -48,6 +50,14 @@ public class EditFunctionPanel {
 
         deploySettings.setBorder(IdeBorderFactory.createTitledBorder(message("lambda.upload.deployment_settings"), false));
         configurationSettings.setBorder(IdeBorderFactory.createTitledBorder(message("lambda.upload.configuration_settings"), false));
+    }
+
+    public void setXrayControlVisibility(boolean visible) {
+        enableXray.setVisible(visible);
+
+        if (!visible) {
+            enableXray.setSelected(false);
+        }
     }
 
     private void createUIComponents() {

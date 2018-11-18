@@ -9,6 +9,7 @@ import com.intellij.openapi.actionSystem.LangDataKeys
 import com.intellij.psi.PsiElement
 import icons.AwsIcons
 import software.amazon.awssdk.services.lambda.model.Runtime
+import software.amazon.awssdk.services.lambda.model.TracingMode
 import software.aws.toolkits.jetbrains.services.cloudformation.CloudFormationTemplateIndex
 import software.aws.toolkits.jetbrains.services.iam.IamRole
 import software.aws.toolkits.jetbrains.services.lambda.LambdaHandlerResolver
@@ -69,5 +70,13 @@ data class FunctionUploadDetails(
     val description: String?,
     val envVars: Map<String, String>,
     val timeout: Int,
-    val memorySize: Int
+    val memorySize: Int,
+    val enableXray: Boolean
 )
+
+fun FunctionUploadDetails.enableXrayAsTracingMode(): TracingMode =
+    if (enableXray) {
+        TracingMode.ACTIVE
+    } else {
+        TracingMode.PASS_THROUGH
+    }

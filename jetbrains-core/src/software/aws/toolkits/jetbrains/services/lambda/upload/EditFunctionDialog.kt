@@ -21,6 +21,7 @@ import software.aws.toolkits.core.s3.regionForBucket
 import software.aws.toolkits.jetbrains.core.AwsClientManager
 import software.aws.toolkits.jetbrains.core.awsClient
 import software.aws.toolkits.jetbrains.core.credentials.ProjectAccountSettingsManager
+import software.aws.toolkits.jetbrains.core.region.AwsRegionProvider
 import software.aws.toolkits.jetbrains.services.iam.CreateIamRoleDialog
 import software.aws.toolkits.jetbrains.services.iam.IamRole
 import software.aws.toolkits.jetbrains.services.iam.listRolesFilter
@@ -72,6 +73,7 @@ class EditFunctionDialog(
     private val envVariables: Map<String, String> = emptyMap(),
     private val timeout: Int = DEFAULT_TIMEOUT,
     private val memorySize: Int = DEFAULT_MEMORY,
+    private val enableXray: Boolean = false,
     private val role: IamRole? = null
 ) : DialogWrapper(project) {
 
@@ -86,6 +88,7 @@ class EditFunctionDialog(
                 envVariables = lambdaFunction.envVariables ?: emptyMap(),
                 timeout = lambdaFunction.timeout,
                 memorySize = lambdaFunction.memorySize,
+                enableXray = lambdaFunction.enableXray,
                 role = lambdaFunction.role
             )
 
@@ -148,6 +151,12 @@ class EditFunctionDialog(
         }
         view.runtime.populateValues(default = runtime) { Runtime.knownValues() }
 
+        view.enableXray.isSelected = enableXray
+
+        val regionProvider = AwsRegionProvider.getInstance()
+        val settings = ProjectAccountSettingsManager.getInstance(project)
+        view.setXrayControlVisibility(regionProvider.isServiceSupported(settings.activeRegion, "xray"))
+
         view.iamRole.populateValues(default = role) {
             iamClient.listRolesFilter { it.assumeRolePolicyDocument().contains(LAMBDA_PRINCIPAL) }
                 .map { IamRole(it.arn()) }
@@ -185,6 +194,7 @@ class EditFunctionDialog(
         envVariables.entries == view.envVars.envVars.entries &&
         timeout == view.timeout.text.toIntOrNull() &&
         memorySize == view.memorySize.text.toIntOrNull() &&
+        enableXray == view.enableXray.isSelected &&
         role == view.iamRole.selected())
 
     private fun bindSliderToTextBox(
@@ -291,7 +301,8 @@ class EditFunctionDialog(
         description = view.description.text,
         envVars = view.envVars.envVars,
         timeout = view.timeout.text.toInt(),
-        memorySize = view.memorySize.text.toInt()
+        memorySize = view.memorySize.text.toInt(),
+        enableXray = view.enableXray.isSelected
     )
 
     private inner class CreateNewLambdaOkAction : OkAction() {
