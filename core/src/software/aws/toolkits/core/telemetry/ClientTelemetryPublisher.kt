@@ -5,7 +5,10 @@ package software.aws.toolkits.core.telemetry
 
 import software.amazon.awssdk.services.toolkittelemetry.ToolkitTelemetryClient
 import software.amazon.awssdk.services.toolkittelemetry.model.MetadataEntry
+import software.amazon.awssdk.services.toolkittelemetry.model.MetricDatum
+import software.amazon.awssdk.services.toolkittelemetry.model.Unit
 import software.aws.toolkits.core.utils.getLogger
+import kotlin.streams.toList
 
 class ClientTelemetryPublisher(
     private val productName: String,
@@ -17,7 +20,7 @@ class ClientTelemetryPublisher(
             it.awsProduct(productName)
             it.awsProductVersion(productVersion)
             it.clientID(clientId)
-//            it.metricData(metrics.toMetricData())
+            it.metricData(metrics.toMetricData())
         }
         true
     } catch (e: Exception) {
@@ -27,16 +30,25 @@ class ClientTelemetryPublisher(
 
     override fun shutdown() { }
 
-    private fun MetadataEntry.build(key: String, value: String) = MetadataEntry.builder()
-        .key(key)
-        .value(value)
-        .build()
+    private fun Collection<Metric>.toMetricData(): Collection<MetricDatum> = this.stream()
+        .flatMap { metric ->
+            metric.entries.values.stream().map { entry -> MetricDatum.builder()
+                .metricName(metric.metricNamespace)
+                .epochTimestamp(metric.createTime.toEpochSecond())
+                .unit(entry.unit.toSdkUnit())
+                .value(entry.value)
+                .build()
+            }
+        }
+        .toList()
 
-//    private fun Collection<Metric>.toMetricData(): Any {
-//        this.stream()
-//            .map { MetricDatum.builder()
-//                .metricName(it.)}
-//    }
+    private fun  MetricUnit.toSdkUnit(): Unit = when (this) {
+        MetricUnit.BYTES -> Unit.BYTES
+        MetricUnit.COUNT -> Unit.COUNT
+        MetricUnit.MILLISECONDS -> Unit.MILLISECONDS
+        MetricUnit.PERCENT -> Unit.PERCENT
+        null -> Unit.NONE
+    }
 
     private companion object {
         private val LOG = getLogger<ClientTelemetryPublisher>()

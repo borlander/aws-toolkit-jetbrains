@@ -5,6 +5,7 @@ import toolkits.gradle.GenerateSdk
 
 dependencies {
     compile("software.amazon.awssdk:services:$awsSdkVersion")
+    runtime("software.amazon.awssdk:core:$awsSdkVersion")
 }
 
 def generatedSources = "$buildDir/generated-src"
