@@ -71,7 +71,7 @@ abstract class LambdaCreatorTestBase(private val functionDetails: FunctionUpload
                 .memorySize(functionDetails.memorySize)
                 .environment(EnvironmentResponse.builder().variables(functionDetails.envVars).build())
                 .tracingConfig {
-                    it.mode(functionDetails.enableXrayAsTracingMode())
+                    it.mode(functionDetails.tracingMode)
                 }
                 .role(functionDetails.iamRole.arn)
                 .build()
@@ -114,7 +114,7 @@ abstract class LambdaCreatorTestBase(private val functionDetails: FunctionUpload
         assertThat(createRequest.runtime()).isEqualTo(functionDetails.runtime)
         assertThat(createRequest.timeout()).isEqualTo(functionDetails.timeout)
         assertThat(createRequest.memorySize()).isEqualTo(functionDetails.memorySize)
-        assertThat(createRequest.tracingConfig().mode()).isEqualTo(functionDetails.enableXrayAsTracingMode())
+        assertThat(createRequest.tracingConfig().mode()).isEqualTo(functionDetails.tracingMode)
         assertThat(createRequest.code().s3Bucket()).isEqualTo(s3Bucket)
         assertThat(createRequest.code().s3Key()).isEqualTo("${functionDetails.name}.zip")
         assertThat(createRequest.code().s3ObjectVersion()).isEqualTo("VersionFoo")
@@ -149,7 +149,7 @@ abstract class LambdaCreatorTestBase(private val functionDetails: FunctionUpload
                 .timeout(functionDetails.timeout)
                 .memorySize(functionDetails.memorySize)
                 .environment(EnvironmentResponse.builder().variables(functionDetails.envVars).build())
-                .tracingConfig(TracingConfigResponse.builder().mode(functionDetails.enableXrayAsTracingMode()).build())
+                .tracingConfig(TracingConfigResponse.builder().mode(functionDetails.tracingMode).build())
                 .role(functionDetails.iamRole.arn)
                 .build()
         }
@@ -205,7 +205,7 @@ abstract class LambdaCreatorTestBase(private val functionDetails: FunctionUpload
                 .timeout(functionDetails.timeout)
                 .memorySize(functionDetails.memorySize)
                 .environment(EnvironmentResponse.builder().variables(functionDetails.envVars).build())
-                .tracingConfig(TracingConfigResponse.builder().mode(functionDetails.enableXrayAsTracingMode()).build())
+                .tracingConfig(TracingConfigResponse.builder().mode(functionDetails.tracingMode).build())
                 .role(functionDetails.iamRole.arn)
                 .build()
         }
@@ -226,7 +226,7 @@ abstract class LambdaCreatorTestBase(private val functionDetails: FunctionUpload
         assertThat(configurationRequest.runtime()).isEqualTo(functionDetails.runtime)
         assertThat(configurationRequest.timeout()).isEqualTo(functionDetails.timeout)
         assertThat(configurationRequest.memorySize()).isEqualTo(functionDetails.memorySize)
-        assertThat(configurationRequest.tracingConfig().mode()).isEqualTo(functionDetails.enableXrayAsTracingMode())
+        assertThat(configurationRequest.tracingConfig().mode()).isEqualTo(functionDetails.tracingMode)
     }
 }
 
@@ -240,7 +240,7 @@ class LambdaCreatorTestWithoutXray : LambdaCreatorTestBase(
         envVars = mapOf("TestKey" to "TestValue"),
         timeout = 60,
         memorySize = 512,
-        enableXray = false
+        xrayEnabled = false
     )
 )
 
@@ -254,6 +254,6 @@ class LambdaCreatorTestWithXray : LambdaCreatorTestBase(
         envVars = mapOf("TestKey" to "TestValue"),
         timeout = 60,
         memorySize = 512,
-        enableXray = true
+        xrayEnabled = true
     )
 )

@@ -73,7 +73,7 @@ class EditFunctionDialog(
     private val envVariables: Map<String, String> = emptyMap(),
     private val timeout: Int = DEFAULT_TIMEOUT,
     private val memorySize: Int = DEFAULT_MEMORY,
-    private val enableXray: Boolean = false,
+    private val xrayEnabled: Boolean = false,
     private val role: IamRole? = null
 ) : DialogWrapper(project) {
 
@@ -88,7 +88,7 @@ class EditFunctionDialog(
                 envVariables = lambdaFunction.envVariables ?: emptyMap(),
                 timeout = lambdaFunction.timeout,
                 memorySize = lambdaFunction.memorySize,
-                enableXray = lambdaFunction.enableXray,
+                xrayEnabled = lambdaFunction.xrayEnabled,
                 role = lambdaFunction.role
             )
 
@@ -151,7 +151,7 @@ class EditFunctionDialog(
         }
         view.runtime.populateValues(default = runtime) { Runtime.knownValues() }
 
-        view.enableXray.isSelected = enableXray
+        view.xrayEnabled.isSelected = xrayEnabled
 
         val regionProvider = AwsRegionProvider.getInstance()
         val settings = ProjectAccountSettingsManager.getInstance(project)
@@ -194,7 +194,7 @@ class EditFunctionDialog(
         envVariables.entries == view.envVars.envVars.entries &&
         timeout == view.timeout.text.toIntOrNull() &&
         memorySize == view.memorySize.text.toIntOrNull() &&
-        enableXray == view.enableXray.isSelected &&
+        xrayEnabled == view.xrayEnabled.isSelected &&
         role == view.iamRole.selected())
 
     private fun bindSliderToTextBox(
@@ -302,7 +302,7 @@ class EditFunctionDialog(
         envVars = view.envVars.envVars,
         timeout = view.timeout.text.toInt(),
         memorySize = view.memorySize.text.toInt(),
-        enableXray = view.enableXray.isSelected
+        xrayEnabled = view.xrayEnabled.isSelected
     )
 
     private inner class CreateNewLambdaOkAction : OkAction() {

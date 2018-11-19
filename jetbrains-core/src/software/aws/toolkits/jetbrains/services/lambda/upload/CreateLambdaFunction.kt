@@ -71,12 +71,12 @@ data class FunctionUploadDetails(
     val envVars: Map<String, String>,
     val timeout: Int,
     val memorySize: Int,
-    val enableXray: Boolean
-)
-
-fun FunctionUploadDetails.enableXrayAsTracingMode(): TracingMode =
-    if (enableXray) {
-        TracingMode.ACTIVE
-    } else {
-        TracingMode.PASS_THROUGH
-    }
+    val xrayEnabled: Boolean
+) {
+    val tracingMode: TracingMode =
+        if (xrayEnabled) {
+            TracingMode.ACTIVE
+        } else {
+            TracingMode.PASS_THROUGH
+        }
+}

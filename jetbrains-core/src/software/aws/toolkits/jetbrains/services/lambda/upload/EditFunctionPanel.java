@@ -41,7 +41,7 @@ public class EditFunctionPanel {
     @NotNull JSlider timeoutSlider;
     @NotNull JPanel configurationSettings;
     @NotNull JLabel handlerLabel;
-    @NotNull JCheckBox enableXray;
+    @NotNull JCheckBox xrayEnabled;
 
     private final Project project;
 
@@ -53,10 +53,10 @@ public class EditFunctionPanel {
     }
 
     public void setXrayControlVisibility(boolean visible) {
-        enableXray.setVisible(visible);
+        xrayEnabled.setVisible(visible);
 
         if (!visible) {
-            enableXray.setSelected(false);
+            xrayEnabled.setSelected(false);
         }
     }
 

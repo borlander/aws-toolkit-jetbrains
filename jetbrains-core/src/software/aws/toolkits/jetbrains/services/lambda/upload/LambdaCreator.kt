@@ -78,7 +78,7 @@ class LambdaFunctionCreator(private val lambdaClient: LambdaClient) {
                         it.variables(details.envVars)
                     }
                     .tracingConfig {
-                        it.mode(details.enableXrayAsTracingMode())
+                        it.mode(details.tracingMode)
                     }
                     .build()
 
@@ -146,7 +146,7 @@ class LambdaFunctionCreator(private val lambdaClient: LambdaClient) {
                 it.variables(details.envVars)
             }
             .tracingConfig {
-                it.mode(details.enableXrayAsTracingMode())
+                it.mode(details.tracingMode)
             }
             .build()
 

@@ -43,7 +43,7 @@ class LambdaRemoteRunConfigurationProducerTest {
             credentialProviderId = credentialProviderId,
             region = region,
             memorySize = 128,
-            enableXray = false
+            xrayEnabled = false
         )
 
         runInEdtAndWait {

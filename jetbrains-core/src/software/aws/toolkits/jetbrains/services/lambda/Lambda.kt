@@ -32,7 +32,7 @@ data class LambdaFunction(
     val envVariables: Map<String, String>?,
     val timeout: Int,
     val memorySize: Int,
-    val enableXray: Boolean,
+    val xrayEnabled: Boolean,
     val role: IamRole,
     val region: AwsRegion,
     val credentialProviderId: String
@@ -50,7 +50,7 @@ fun FunctionConfiguration.toDataClass(credentialProviderId: String, region: AwsR
     memorySize = this.memorySize(),
     role = IamRole(this.role()),
     credentialProviderId = credentialProviderId,
-    enableXray = this.tracingConfig().mode() == TracingMode.ACTIVE,
+    xrayEnabled = this.tracingConfig().mode() == TracingMode.ACTIVE,
     region = region
 )
 
@@ -67,7 +67,7 @@ fun CreateFunctionResponse.toDataClass(credentialProviderId: String, region: Aws
     role = IamRole(this.role()),
     credentialProviderId = credentialProviderId,
     region = region,
-    enableXray = this.tracingConfig().mode() == TracingMode.ACTIVE
+    xrayEnabled = this.tracingConfig().mode() == TracingMode.ACTIVE
 )
 
 fun UpdateFunctionConfigurationResponse.toDataClass(credentialProviderId: String, region: AwsRegion) = LambdaFunction(
@@ -83,7 +83,7 @@ fun UpdateFunctionConfigurationResponse.toDataClass(credentialProviderId: String
     role = IamRole(this.role()),
     credentialProviderId = credentialProviderId,
     region = region,
-    enableXray = this.tracingConfig().mode() == TracingMode.ACTIVE
+    xrayEnabled = this.tracingConfig().mode() == TracingMode.ACTIVE
 )
 
 fun GetFunctionConfigurationResponse.toDataClass(credentialProviderId: String, region: AwsRegion) = LambdaFunction(
@@ -99,5 +99,5 @@ fun GetFunctionConfigurationResponse.toDataClass(credentialProviderId: String, r
     role = IamRole(this.role()),
     credentialProviderId = credentialProviderId,
     region = region,
-    enableXray = this.tracingConfig().mode() == TracingMode.ACTIVE
+    xrayEnabled = this.tracingConfig().mode() == TracingMode.ACTIVE
 )
